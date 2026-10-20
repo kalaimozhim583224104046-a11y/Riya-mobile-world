@@ -1,0 +1,9 @@
+
+node_modules/
+backend/node_modules/
+.env
+backend/.env
+dist/
+backend/riya_mobile_world.db
+/backend/riya_mobile_world.db
+*.db

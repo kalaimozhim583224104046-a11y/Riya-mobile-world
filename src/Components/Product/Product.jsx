@@ -8,29 +8,22 @@ import samsung from "../../assets/images.jpg";
 import oneplus from "../../assets/images (2).jpg";
 import vivo from "../../assets/images (1).jpg";
 
+const productData = [
+  { id: 1, name: "iPhone 15", price: 65000, brand: "Apple" },
+  { id: 2, name: "Samsung S25", price: 75000, brand: "Samsung" },
+  { id: 3, name: "OnePlus 12", price: 55000, brand: "OnePlus" },
+  { id: 4, name: "Vivo V30", price: 35000, brand: "Vivo" },
+];
+
 function Product() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/products")
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Products load failed");
-        }
-        return response.json();
-      })
-      .then((data) => {
-        setProducts(data);
-        setLoading(false);
-      })
-      .catch(() => {
-        setError("Products load aagala. Backend-ai check pannu.");
-        setLoading(false);
-      });
+    setProducts(productData);
+    setLoading(false);
   }, []);
 
   const imageMap = {
@@ -41,10 +34,9 @@ function Product() {
   };
 
   const filteredProducts = products.filter((product) => {
-    const matchesSearch =
-      `${product.name} ${product.brand}`
-        .toLowerCase()
-        .includes(search.trim().toLowerCase());
+    const matchesSearch = `${product.name} ${product.brand}`
+      .toLowerCase()
+      .includes(search.trim().toLowerCase());
 
     const matchesCategory =
       category === "All" ||
@@ -75,7 +67,6 @@ function Product() {
         <div className="product-controls">
           <div className="product-search">
             <span>🔍</span>
-
             <input
               type="search"
               placeholder="Search mobile or brand..."
@@ -85,10 +76,7 @@ function Product() {
             />
 
             {search && (
-              <button
-                onClick={() => setSearch("")}
-                type="button"
-              >
+              <button type="button" onClick={() => setSearch("")}>
                 Clear
               </button>
             )}
@@ -108,36 +96,26 @@ function Product() {
           </select>
         </div>
 
-        {loading && <p>Loading products...</p>}
-
-        {error && (
-          <div className="product-empty">
-            <p>{error}</p>
-            <button
-              type="button"
-              onClick={() => window.location.reload()}
-            >
-              Try Again
-            </button>
-          </div>
-        )}
-
-        {!loading && !error && (
+        {loading ? (
+          <p>Loading products...</p>
+        ) : (
           <>
             <p className="product-count">
               Showing {filteredProducts.length} products
             </p>
 
-            {filteredProducts.length > 0 && (
+            {filteredProducts.length > 0 ? (
               <div className="products-grid">
                 {filteredProducts.map((product) => (
                   <article className="mobile-card" key={product.id}>
                     <div className="mobile-image-area">
                       <img
-                        src={imageMap[product.name] || iphone}
+                        src={imageMap[product.name]}
                         alt={product.name}
+                        onError={(e) => {
+                          e.currentTarget.style.visibility = "hidden";
+                        }}
                       />
-
                       <span className="mobile-brand">
                         {product.brand}
                       </span>
@@ -145,36 +123,22 @@ function Product() {
 
                     <div className="mobile-details">
                       <h3>{product.name}</h3>
-
                       <p className="mobile-price">
-                        ₹{Number(product.price).toLocaleString("en-IN")}
+                        ₹{product.price.toLocaleString("en-IN")}
                       </p>
-
-                      <Link
-                        to="/order"
-                        className="product-order-btn"
-                      >
+                      <Link to="/order" className="product-order-btn">
                         Order Now →
                       </Link>
                     </div>
                   </article>
                 ))}
               </div>
-            )}
-
-            {filteredProducts.length === 0 && (
+            ) : (
               <div className="product-empty">
                 <span>📱</span>
                 <h3>No products found</h3>
-                <p>
-                  Search and brand filter match aagala.
-                  Try another search or reset filters.
-                </p>
-
-                <button
-                  onClick={resetFilters}
-                  type="button"
-                >
+                <p>Try another search or brand.</p>
+                <button type="button" onClick={resetFilters}>
                   Reset Filters
                 </button>
               </div>

@@ -1,6 +1,14 @@
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useLocation } from "react-router-dom";
 import "./Order.css";
+
+const products = [
+  { id: 1, name: "iPhone 15", price: 65000, brand: "Apple" },
+  { id: 2, name: "Samsung S25", price: 75000, brand: "Samsung" },
+  { id: 3, name: "OnePlus 12", price: 55000, brand: "OnePlus" },
+  { id: 4, name: "Vivo V30", price: 35000, brand: "Vivo" },
+];
 
 const API_URL = "http://localhost:5000";
 
@@ -8,37 +16,20 @@ const formatPrice = (price) =>
   `₹${Number(price).toLocaleString("en-IN")}`;
 
 function Order() {
-  const [products, setProducts] = useState([]);
-  const [selectedProduct, setSelectedProduct] = useState("");
+  const location = useLocation();
+  const passedProduct = location.state?.product;
+
+  const [selectedProduct, setSelectedProduct] = useState(
+    String(
+      products.find((p) => p.name === passedProduct?.name)?.id ||
+      products[0].id
+    )
+  );
   const [quantity, setQuantity] = useState(1);
   const [payment, setPayment] = useState("Cash on Delivery");
-  const [loadingProducts, setLoadingProducts] = useState(true);
   const [savingOrder, setSavingOrder] = useState(false);
   const [orderId, setOrderId] = useState(null);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    async function loadProducts() {
-      try {
-        const response = await fetch(`${API_URL}/api/products`);
-        if (!response.ok) throw new Error("Products load aagala.");
-
-        const data = await response.json();
-        if (!Array.isArray(data)) {
-          throw new Error("Invalid products response.");
-        }
-
-        setProducts(data);
-        if (data.length) setSelectedProduct(String(data[0].id));
-      } catch (err) {
-        setError(err.message || "Backend connection failed.");
-      } finally {
-        setLoadingProducts(false);
-      }
-    }
-
-    loadProducts();
-  }, []);
 
   const product = products.find(
     (item) => String(item.id) === selectedProduct
@@ -53,16 +44,12 @@ function Order() {
 
     const form = event.currentTarget;
     const formData = new FormData(form);
+
     const customerName = String(formData.get("name") || "").trim();
     const phone = String(formData.get("phone") || "").trim();
 
     if (!customerName || !phone || !product) {
-      setError("Name, phone number, product select pannu.");
-      return;
-    }
-
-    if (!Number.isInteger(quantity) || quantity < 1) {
-      setError("Quantity minimum 1 irukkanum.");
+      setError("Name, phone number, mobile select pannu.");
       return;
     }
 
@@ -84,42 +71,23 @@ function Order() {
         body: JSON.stringify(orderData),
       });
 
-      const text = await response.text();
-      let result;
-
-      try {
-        result = JSON.parse(text);
-      } catch {
-        throw new Error(
-          `Backend JSON response tharala (HTTP ${response.status}). Server route check pannu.`
-        );
-      }
+      const result = await response.json();
 
       if (!response.ok) {
         throw new Error(result.message || "Order save aagala.");
       }
 
-      setOrderId(result.orderId);
+      setOrderId(result.orderId ?? "Confirmed");
       form.reset();
       setQuantity(1);
       setPayment("Cash on Delivery");
-
-      if (products.length) {
-        setSelectedProduct(String(products[0].id));
-      }
-    } catch (err) {
-      setError(err.message || "Order submit panna mudiyala.");
+    } catch {
+      setError(
+        "Order submit aagala. Backend online-la run aagavillai. Products display aagum; order save panna hosted backend venum."
+      );
     } finally {
       setSavingOrder(false);
     }
-  }
-
-  if (loadingProducts) {
-    return (
-      <main className="order-page">
-        <p>Loading products...</p>
-      </main>
-    );
   }
 
   return (
@@ -135,14 +103,10 @@ function Order() {
           <h2>📱 Your Mobile</h2>
 
           <div className="product-image-wrap">
-            {product ? (
-              <div className="order-product-placeholder">
-                <span>📱</span>
-                <p>{product.brand}</p>
-              </div>
-            ) : (
-              <p>No product available</p>
-            )}
+            <div className="order-product-placeholder">
+              <span>📱</span>
+              <p>{product?.brand}</p>
+            </div>
           </div>
 
           <h3>{product?.name || "Select a mobile"}</h3>
@@ -158,7 +122,6 @@ function Order() {
               setSelectedProduct(event.target.value);
               setOrderId(null);
             }}
-            required
           >
             {products.map((item) => (
               <option key={item.id} value={String(item.id)}>
@@ -181,7 +144,6 @@ function Order() {
               );
               setOrderId(null);
             }}
-            required
           />
 
           <div className="order-total">
@@ -257,15 +219,13 @@ function Order() {
             </label>
 
             {error && (
-              <p className="order-error" role="alert">
-                {error}
-              </p>
+              <p className="order-error" role="alert">{error}</p>
             )}
 
             <button
               type="submit"
               className="place-order-btn"
-              disabled={savingOrder || !product}
+              disabled={savingOrder}
             >
               {savingOrder ? "Saving Order..." : "Place Order"}
             </button>
@@ -284,7 +244,6 @@ function Order() {
 
       <section className="order-card progress-card">
         <h2>📦 Order Progress</h2>
-
         <div className="order-progress">
           {["Order Placed", "Confirmed", "Shipped", "Delivered"].map(
             (step, index) => (
@@ -302,7 +261,6 @@ function Order() {
             )
           )}
         </div>
-
         <small>
           Order progress will update when the order status is updated.
         </small>
